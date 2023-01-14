@@ -1,29 +1,55 @@
-variable "aws_region" {
-  description = "The AWS region to create things in."
-  default     = "eu-west-2"
+provider "aws" {
+  region = var.aws_region
 }
 
-variable "key_name" {
-  description = " SSH keys to connect to ec2 instance"
-  default     =  "ansiblekeys"
+#Create security group with firewall rules
+resource "aws_security_group" "my_security_group" {
+  name        = var.security_group
+  description = "security group for Ec2 instance"
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+ ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+ # outbound from jenkis server
+  egress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags= {
+    Name = var.security_group
+  }
 }
 
-variable "instance_type" {
-  description = "instance type for ec2"
-  default     =  "t2.micro"
+# Create AWS ec2 instance
+resource "aws_instance" "myFirstInstance" {
+  ami           = var.ami_id
+  key_name = var.key_name
+  instance_type = var.instance_type
+  security_groups= [var.security_group]
+  tags= {
+    Name = var.tag_name
+  }
 }
 
-variable "security_group" {
-  description = "Name of security group"
-  default     = "my-jenkins-security-group"
-}
-
-variable "tag_name" {
-  description = "Tag Name of for Ec2 instance"
-  default     = "tf-ec2-instance"
-}
-
-variable "ami_id" {
-  description = "AMI for Ubuntu Ec2 instance"
-  default     = "ami-04e3f0d06628278cc"
+# Create Elastic IP address
+resource "aws_eip" "myFirstInstance" {
+  vpc      = true
+  instance = aws_instance.myFirstInstance.id
+tags= {
+    Name = "my_elastic_ip"
+  }
 }
